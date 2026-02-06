@@ -1,0 +1,37 @@
+epics:
+  - id: EPIC-1
+    title: MVP面接体験
+    stories:
+      - id: ST-101
+        title: 面接セッション開始API
+      - id: ST-102
+        title: チャットUI
+      - id: ST-103
+        title: Structured Outputパーサ
+  - id: EPIC-2
+    title: 評価と履歴
+    stories:
+      - id: ST-201
+        title: 5軸評価生成
+      - id: ST-202
+        title: 弱点履歴保存
+      - id: ST-203
+        title: 推移ダッシュボード
+  - id: EPIC-3
+    title: 課金
+    stories:
+      - id: ST-301
+        title: Stripe Checkout
+      - id: ST-302
+        title: Webhook処理
+      - id: ST-303
+        title: チケット消費ロジック
+  - id: EPIC-4
+    title: 運用・品質
+    stories:
+      - id: ST-401
+        title: レート制限
+      - id: ST-402
+        title: 監視ダッシュボード
+      - id: ST-403
+        title: 規約・プライバシー公開
