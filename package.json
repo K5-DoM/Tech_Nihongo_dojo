@@ -1,0 +1,13 @@
+{
+  "name": "tech-nihongo-dojo",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter api dev",
+    "build": "pnpm -r run build",
+    "deploy": "pnpm --filter api deploy"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "pnpm@10.28.2"
+}
