@@ -1,0 +1,8 @@
+# ローカル用。このファイルをコピーして .dev.vars にリネームし、値を埋める。
+# .dev.vars は .gitignore 済みなので push されない。
+# 本番では Cloudflare の環境変数や wrangler secret を使用すること。
+
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+# JWT 検証用。32文字以上のランダム文字列を設定すること（本番は Supabase の JWT Secret を使用）。
+SUPABASE_JWT_SECRET=
