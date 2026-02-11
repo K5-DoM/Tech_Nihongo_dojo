@@ -61,6 +61,24 @@ Tech_Nihongo_dojo/
 - **環境変数**: `apps/api/.dev.vars` に `OPENAI_API_KEY=sk-...` を追加してください（API 実行に必須）。
 - **Supabase**: Week 1 でマイグレーション済みであれば不要。未実施の場合は `plan_pack/docs/05_db_schema.sql` を Supabase の SQL Editor で実行してください。
 
+## 単体テストの実行（手元のみ）
+
+以下は **手元のターミナル** で実行してください（CI 環境では `pnpm install` が frozen-lockfile になるため、事前に `pnpm install --no-frozen-lockfile` で lockfile を更新しておくこと）。
+
+1. **依存関係のインストール**（初回または package.json 変更後）
+   ```bash
+   pnpm install
+   ```
+   ※ vitest 追加後は `pnpm install --no-frozen-lockfile` が必要な場合あり。
+
+2. **テスト実行**
+   ```bash
+   pnpm test
+   ```
+   または個別に:
+   - `pnpm --filter shared test` … shared の Zod スキーマテスト
+   - `pnpm --filter api test` … api の POST /api/chat, POST /api/interviews のバリデーションテスト
+
 ## 技術メモ
 
 - チャット応答スキーマ: 07_prompt_design.md の JSON スキーマに合わせる。`weakness_tags` は maxItems 3。

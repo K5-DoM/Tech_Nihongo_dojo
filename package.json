@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "pnpm --filter api dev",
     "dev:web": "pnpm --filter web dev",
+    "test": "pnpm --filter shared test && pnpm --filter api test",
     "build": "pnpm -r run build",
     "deploy": "pnpm --filter api deploy"
   },

@@ -22,7 +22,13 @@ type Variables = { userId: string };
 export const interviewsRoutes = new Hono<{ Bindings: Env; Variables: Variables }>()
   .post("/api/interviews", async (c) => {
     const userId = c.get("userId");
-    const parseResult = startInterviewBodySchema.safeParse(await c.req.json());
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const parseResult = startInterviewBodySchema.safeParse(body);
     if (!parseResult.success) {
       return c.json({ error: "Invalid request body", details: parseResult.error.flatten() }, 400);
     }
