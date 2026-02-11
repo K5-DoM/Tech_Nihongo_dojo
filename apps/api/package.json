@@ -10,8 +10,11 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
+    "@tech-nihongo-dojo/shared": "workspace:*",
     "hono": "^4.6.12",
-    "jose": "^5.9.6"
+    "jose": "^5.9.6",
+    "openai": "^4.73.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241127.0",

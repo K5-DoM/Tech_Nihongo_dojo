@@ -1,8 +1,11 @@
 import { Hono } from "hono";
 import type { SupabaseEnv } from "./lib/supabase";
+import type { OpenAIEnv } from "./lib/openai";
 import { requireAuth } from "./middleware/auth";
+import { interviewsRoutes } from "./routes/interviews";
+import { chatRoutes } from "./routes/chat";
 
-type Bindings = SupabaseEnv & {
+type Bindings = SupabaseEnv & OpenAIEnv & {
   SUPABASE_JWT_SECRET?: string;
 };
 
@@ -32,6 +35,9 @@ api.get("/api/me", (c) => {
   const userId = c.get("userId");
   return c.json({ userId });
 });
+
+api.route("/", interviewsRoutes);
+api.route("/", chatRoutes);
 
 app.route("/", api);
 

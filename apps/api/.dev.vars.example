@@ -6,3 +6,5 @@ SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 # JWT 検証用。32文字以上のランダム文字列を設定すること（本番は Supabase の JWT Secret を使用）。
 SUPABASE_JWT_SECRET=
+# 面接・チャットの初回質問・応答生成用（OpenAI API Key）。
+OPENAI_API_KEY=
