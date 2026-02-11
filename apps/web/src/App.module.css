@@ -1,0 +1,155 @@
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.header h1 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.25rem;
+}
+
+.tokenRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tokenRow label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tokenInput {
+  width: 220px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.main section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.error {
+  color: #c00;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.bubble {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  max-width: 90%;
+}
+
+.bubble.user {
+  align-self: flex-end;
+  background: #e3f2fd;
+}
+
+.bubble.assistant {
+  align-self: flex-start;
+  background: #f5f5f5;
+}
+
+.label {
+  margin: 0 0 0.35rem 0;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.bubble p:not(.label) {
+  margin: 0;
+}
+
+.correction {
+  margin-top: 0.5rem !important;
+  font-size: 0.875rem;
+  color: #2e7d32;
+}
+
+.tags {
+  margin-top: 0.35rem !important;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.inputRow {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.inputRow button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #1976d2;
+  background: #1976d2;
+  color: #fff;
+  cursor: pointer;
+}
+
+.inputRow button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.finished {
+  color: #666;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0 0;
+}
+
+.newSession {
+  margin-top: 1rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.875rem;
+  background: transparent;
+  border: 1px solid #999;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.newSession:hover {
+  background: #f0f0f0;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #1976d2;
+  background: #1976d2;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9375rem;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
