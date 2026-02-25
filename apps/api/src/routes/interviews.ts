@@ -128,6 +128,13 @@ export const interviewsRoutes = new Hono<{ Bindings: Env; Variables: Variables }
     const { mode, profileSnapshot } = parseResult.data;
 
     const supabase = createSupabaseClient(c.env);
+
+    // interviews.user_id は profiles(id) を参照するため、Supabase Auth でサインアップ直後は
+    // profiles に行がない場合がある。先に profiles を upsert して FK を満たす。
+    await supabase
+      .from("profiles")
+      .upsert({ id: userId, updated_at: new Date().toISOString() }, { onConflict: "id" });
+
     const { data: interview, error: insertError } = await supabase
       .from("interviews")
       .insert({

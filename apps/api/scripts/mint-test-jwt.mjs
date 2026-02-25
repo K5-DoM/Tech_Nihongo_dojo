@@ -1,7 +1,33 @@
 // scripts/mint-test-jwt.mjs
 // ローカルで /api/me を試すためのテスト JWT 発行。SUPABASE_JWT_SECRET は .dev.vars と一致させること。
-// 本番の秘密鍵では実行しないこと。
+// 本番の秘密鍵では実行しないこと。開発・ローカル専用。
 import * as jose from "jose";
+import { readFileSync, existsSync } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const devVarsPath = path.join(__dirname, "..", ".dev.vars");
+
+if (process.env.NODE_ENV === "production" && !process.env.SUPABASE_JWT_SECRET) {
+  console.error("本番では .dev.vars を読まないため、SUPABASE_JWT_SECRET を環境変数で渡してください。このスクリプトは開発・ローカル専用です。");
+  process.exit(1);
+}
+
+if (!process.env.SUPABASE_JWT_SECRET && process.env.NODE_ENV !== "production" && existsSync(devVarsPath)) {
+  const content = readFileSync(devVarsPath, "utf8");
+  for (const line of content.split("\n")) {
+    const trimmed = line.replace(/#.*/, "").trim();
+    if (!trimmed) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const value = trimmed.slice(eq + 1).trim();
+    if (key && process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
 
 const SECRET = process.env.SUPABASE_JWT_SECRET;
 if (!SECRET || SECRET.length < 32) {

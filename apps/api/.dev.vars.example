@@ -17,3 +17,6 @@ SUPABASE_JWT_SECRET=
 
 # 面接・チャットの初回質問・応答生成用（OpenAI API Key）
 OPENAI_API_KEY=
+
+# 開発用: 発行するJWTの sub に使うユーザーID。開発者の Supabase Auth のユーザーUUIDを入れると、その開発者として /api/me 等を試せる。
+TEST_USER_ID=

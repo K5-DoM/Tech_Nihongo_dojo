@@ -61,6 +61,6 @@ Supabase の **Project Settings → API** および **Project Settings → JWT**
 
 ## 5. 関連ドキュメント
 
-- 開発時に JWT を手動で取得してフロントに貼る手順: [dev_auth_jwt.md](dev_auth_jwt.md)（存在する場合）
+- 開発用 JWT 発行手順（mint スクリプトの使い方）: [dev_auth_jwt.md](dev_auth_jwt.md)
 - API の環境変数テンプレート: [apps/api/.dev.vars.example](../../apps/api/.dev.vars.example)
 - セキュリティ要件（API key 管理・RLS）: [09_security_privacy.md](09_security_privacy.md)

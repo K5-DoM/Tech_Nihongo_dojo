@@ -88,18 +88,4 @@ git commit -m "feat(api): JWT auth middleware for /api/*"
 
 ## テスト JWT 発行（/api/me 確認用）
 
-`apps/api/scripts/mint-test-jwt.mjs` は Node で実行するため、**Wrangler 専用の .dev.vars は読まれない**（.dev.vars は `wrangler dev` が Worker に渡すだけ）。スクリプトは `process.env.SUPABASE_JWT_SECRET` を見るので、シェルで環境変数を渡してから実行する。
-
-**方法1（推奨）**
-
-1. `apps/api` に移動する。
-2. `.dev.vars` に書いた `SUPABASE_JWT_SECRET` の値を、PowerShell の環境変数に設定する。
-3. スクリプトを実行する。
-
-```powershell
-cd apps/api
-$env:SUPABASE_JWT_SECRET = "（.dev.vars に書いたのと同じ32文字以上の文字列）"
-pnpm exec node scripts/mint-test-jwt.mjs
-```
-
-表示された JWT を `Authorization: Bearer <JWT>` で `GET http://127.0.0.1:8787/api/me` に付けて送ると 200 と `userId` が返る。
+手順の詳細は **[開発用 JWT 発行手順](dev_auth_jwt.md)** を参照。
