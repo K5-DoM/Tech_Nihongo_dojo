@@ -39,16 +39,18 @@
 - `logic_jump`
 - `overclaim`
 
-## 7.5 評価時プロンプト
+## 7.5 評価時プロンプト（POST /api/interviews/:id/finish）
 入力:
-- 会話ログ（要約）
-- 直近3回の弱点タグ
-- 目標職種
+- **会話ログ**: 当該セッションの `messages` を `role: content` の形式で1行ずつ連結した文字列（MVP では全文を渡し、長い場合は LLM の max_tokens で切り詰め）
+- **直近弱点タグ**: 同一ユーザーの `weakness_history` を `last_seen_at` 降順で最大10件取得し、タグの重複を除いた配列
+- **目標職種**: 未設定の場合は「（未設定）」として渡す
 
-出力:
-- 5軸スコア（1-5）
-- strengths / weaknesses / nextActions
-- 120字程度サマリ
+出力（Structured Output: evaluationSchema）:
+- **5軸スコア**: logic, accuracy, clarity, keigo, specificity（各 1-5）
+- **strengths** / **weaknesses** / **nextActions**: それぞれ文字列配列。nextActions は行動ベースで最大3つ
+- **summary**: 120字程度の日本語サマリ
+
+パース失敗時は1回リトライ。それでも失敗時は API は 500 を返す。
 
 ## 7.6 品質担保
 - JSON parse失敗時リトライ1回

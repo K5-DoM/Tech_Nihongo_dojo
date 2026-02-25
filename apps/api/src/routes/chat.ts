@@ -51,7 +51,19 @@ export const chatRoutes = new Hono<{ Bindings: Env; Variables: Variables }>()
       content: r.content,
     }));
 
-    const response = await getChatTurn(c.env, messages, userMessage);
+    const { data: weaknessRows } = await supabase
+      .from("weakness_history")
+      .select("weakness_tag")
+      .eq("user_id", userId)
+      .order("last_seen_at", { ascending: false })
+      .limit(10);
+    const recentWeaknessTags = [
+      ...new Set((weaknessRows ?? []).map((r) => r.weakness_tag)),
+    ];
+
+    const response = await getChatTurn(c.env, messages, userMessage, {
+      recentWeaknessTags,
+    });
 
     const { error: insertUserErr } = await supabase.from("messages").insert({
       interview_id: interviewId,

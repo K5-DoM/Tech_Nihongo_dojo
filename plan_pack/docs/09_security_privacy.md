@@ -1,5 +1,9 @@
 # 09. セキュリティ・プライバシー設計
 
+**Supabase のキー・JWT の弁別**（どのタブのどのキーをどこで使うか）は [supabase_keys_reference.md](supabase_keys_reference.md) にまとめている。API は Legacy JWT Secret で Bearer 検証、Legacy service_role（または Secret key）で DB 接続。
+
+---
+
 ## 9.1 データ分類
 - P1: 認証情報（JWT, user_id）
 - P2: 面接会話ログ（準機微）
@@ -8,7 +12,7 @@
 ## 9.2 セキュリティ要件
 - RLS必須（ユーザー行隔離）
 - Stripe webhook署名検証
-- API keyはWorkers Secret管理
+- API key は Workers Secret 管理。Supabase は **Legacy JWT Secret**（Bearer 検証）と **Legacy service_role** または **Secret key**（DB 用）を使い分ける。詳細は [supabase_keys_reference.md](supabase_keys_reference.md)。
 - ログに個人情報を出しすぎない
 
 ## 9.3 プライバシー要件

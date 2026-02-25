@@ -4,3 +4,4 @@ compatibility_date = "2024-11-01"
 
 # 環境変数: ローカルは .dev.vars、本番は wrangler secret または Dashboard で設定
 # 必要なキー: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET
+# 各キーの取得場所（Supabase のタブ区別）: plan_pack/docs/supabase_keys_reference.md および .dev.vars.example を参照

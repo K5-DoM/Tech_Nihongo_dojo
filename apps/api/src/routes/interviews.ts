@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Hono } from "hono";
 import { createSupabaseClient, type SupabaseEnv } from "../lib/supabase";
-import { getFirstQuestion } from "../lib/openai";
+import { getFirstQuestion, getEvaluation } from "../lib/openai";
 import type { OpenAIEnv } from "../lib/openai";
 
 const startInterviewBodySchema = z.object({
@@ -16,10 +16,103 @@ const startInterviewBodySchema = z.object({
     .default({}),
 });
 
+const listQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+});
+
 type Env = SupabaseEnv & OpenAIEnv;
 type Variables = { userId: string };
 
 export const interviewsRoutes = new Hono<{ Bindings: Env; Variables: Variables }>()
+  .get("/api/interviews", async (c) => {
+    const userId = c.get("userId");
+    const parseResult = listQuerySchema.safeParse({
+      limit: c.req.query("limit"),
+      offset: c.req.query("offset"),
+    });
+    const { limit, offset } = parseResult.success ? parseResult.data : { limit: 20, offset: 0 };
+    const supabase = createSupabaseClient(c.env);
+
+    const { data: rows, error } = await supabase
+      .from("interviews")
+      .select("id, started_at, ended_at, status, evaluations(summary)")
+      .eq("user_id", userId)
+      .order("started_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error("interviews list error:", error);
+      return c.json({ error: "Failed to list interviews" }, 500);
+    }
+
+    const items = (rows ?? []).map((r: { id: string; started_at: string; ended_at: string | null; status: string; evaluations: { summary: string }[] | null }) => ({
+      id: r.id,
+      started_at: r.started_at,
+      ended_at: r.ended_at,
+      status: r.status,
+      summary: Array.isArray(r.evaluations) && r.evaluations[0] ? r.evaluations[0].summary : null,
+    }));
+    return c.json({ interviews: items });
+  })
+  .get("/api/interviews/:id", async (c) => {
+    const userId = c.get("userId");
+    const interviewId = c.req.param("id");
+    const supabase = createSupabaseClient(c.env);
+
+    const { data: interview, error: interviewError } = await supabase
+      .from("interviews")
+      .select("id, started_at, ended_at, status")
+      .eq("id", interviewId)
+      .eq("user_id", userId)
+      .single();
+
+    if (interviewError || !interview) {
+      return c.json({ error: "Interview not found or access denied" }, 404);
+    }
+
+    const { data: messageRows } = await supabase
+      .from("messages")
+      .select("role, content, correction, created_at")
+      .eq("interview_id", interviewId)
+      .order("created_at", { ascending: true });
+
+    const { data: evalRow } = await supabase
+      .from("evaluations")
+      .select("score_logic, score_accuracy, score_clarity, score_keigo, score_specificity, strengths, weaknesses, next_actions, summary")
+      .eq("interview_id", interviewId)
+      .single();
+
+    const messages = (messageRows ?? []).map((m: { role: string; content: string; correction: string | null; created_at: string }) => ({
+      role: m.role,
+      content: m.content,
+      correction: m.correction ?? undefined,
+      created_at: m.created_at,
+    }));
+
+    const evaluation = evalRow
+      ? {
+          logic: evalRow.score_logic,
+          accuracy: evalRow.score_accuracy,
+          clarity: evalRow.score_clarity,
+          keigo: evalRow.score_keigo,
+          specificity: evalRow.score_specificity,
+          strengths: evalRow.strengths,
+          weaknesses: evalRow.weaknesses,
+          nextActions: evalRow.next_actions,
+          summary: evalRow.summary,
+        }
+      : undefined;
+
+    return c.json({
+      id: interview.id,
+      started_at: interview.started_at,
+      ended_at: interview.ended_at,
+      status: interview.status,
+      messages,
+      evaluation,
+    });
+  })
   .post("/api/interviews", async (c) => {
     const userId = c.get("userId");
     let body: unknown;
@@ -62,4 +155,87 @@ export const interviewsRoutes = new Hono<{ Bindings: Env; Variables: Variables }
       interviewId: interview.id,
       firstQuestion,
     });
+  })
+  .post("/api/interviews/:id/finish", async (c) => {
+    const userId = c.get("userId");
+    const interviewId = c.req.param("id");
+    const supabase = createSupabaseClient(c.env);
+
+    const { data: interview, error: interviewError } = await supabase
+      .from("interviews")
+      .select("id, user_id, status")
+      .eq("id", interviewId)
+      .eq("user_id", userId)
+      .single();
+
+    if (interviewError || !interview) {
+      return c.json({ error: "Interview not found or access denied" }, 404);
+    }
+    if (interview.status !== "active") {
+      return c.json({ error: "Interview already finished or aborted" }, 409);
+    }
+
+    const { data: messageRows } = await supabase
+      .from("messages")
+      .select("role, content")
+      .eq("interview_id", interviewId)
+      .order("created_at", { ascending: true });
+
+    const conversationLog = (messageRows ?? [])
+      .map((r) => `${r.role}: ${r.content}`)
+      .join("\n");
+    if (!conversationLog.trim()) {
+      return c.json({ error: "No messages to evaluate" }, 400);
+    }
+
+    const { data: weaknessRows } = await supabase
+      .from("weakness_history")
+      .select("weakness_tag")
+      .eq("user_id", userId)
+      .order("last_seen_at", { ascending: false })
+      .limit(10);
+    const recentWeaknessTags = [
+      ...new Set((weaknessRows ?? []).map((r) => r.weakness_tag)),
+    ];
+
+    const evaluation = await getEvaluation(
+      c.env,
+      conversationLog,
+      recentWeaknessTags
+    );
+    if (!evaluation) {
+      return c.json(
+        { error: "Failed to generate evaluation" },
+        500
+      );
+    }
+
+    const { error: evalInsertError } = await supabase.from("evaluations").insert({
+      interview_id: interviewId,
+      score_logic: evaluation.logic,
+      score_accuracy: evaluation.accuracy,
+      score_clarity: evaluation.clarity,
+      score_keigo: evaluation.keigo,
+      score_specificity: evaluation.specificity,
+      strengths: evaluation.strengths,
+      weaknesses: evaluation.weaknesses,
+      next_actions: evaluation.nextActions,
+      summary: evaluation.summary,
+    });
+    if (evalInsertError) {
+      console.error("evaluations insert error:", evalInsertError);
+      return c.json({ error: "Failed to save evaluation" }, 500);
+    }
+
+    const { error: updateError } = await supabase
+      .from("interviews")
+      .update({ status: "finished", ended_at: new Date().toISOString() })
+      .eq("id", interviewId)
+      .eq("user_id", userId);
+    if (updateError) {
+      console.error("interviews update error:", updateError);
+      return c.json({ error: "Failed to update interview status" }, 500);
+    }
+
+    return c.json({ evaluation });
   });

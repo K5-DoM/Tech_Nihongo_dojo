@@ -1,7 +1,14 @@
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
-import { chatResponseSchema } from "@tech-nihongo-dojo/shared";
-import type { ChatResponse } from "@tech-nihongo-dojo/shared";
+import { chatResponseSchema, evaluationSchema } from "@tech-nihongo-dojo/shared";
+import type { ChatResponse, Evaluation } from "@tech-nihongo-dojo/shared";
+
+/** LLM 呼び出しのイベントログ（運用・デバッグ用）。必要に応じて外部ロガーに差し替え可能。 */
+function logDojoLlm(payload: { event: string; attempt?: number }): void {
+  if (typeof console !== "undefined" && console.debug) {
+    console.debug("[dojo-llm]", payload.event, payload.attempt != null ? { attempt: payload.attempt } : "");
+  }
+}
 
 export type OpenAIEnv = {
   OPENAI_API_KEY: string;
@@ -48,15 +55,23 @@ export async function getFirstQuestion(
 
 /**
  * 1ターン進行。Structured Output で応答を取得。失敗時は1回リトライし、それでも失敗ならフォールバックを返す。
+ * recentWeaknessTags を渡すとシステムプロンプトに注入し、弱点を意識した質問・指摘を促す（07 履歴活用）。
  */
 export async function getChatTurn(
   env: OpenAIEnv,
   messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
-  userMessage: string
+  userMessage: string,
+  options?: { recentWeaknessTags?: string[] }
 ): Promise<ChatResponse> {
   const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  const recentTags = options?.recentWeaknessTags ?? [];
+  const weaknessHint =
+    recentTags.length > 0
+      ? `\nこの候補者の直近の弱点タグ: ${recentTags.join(", ")} を意識して質問・指摘してください。`
+      : "";
+  const systemContent = CHAT_SYSTEM_PROMPT + weaknessHint;
   const fullMessages = [
-    { role: "system" as const, content: CHAT_SYSTEM_PROMPT },
+    { role: "system" as const, content: systemContent },
     ...messages,
     { role: "user" as const, content: userMessage },
   ];
@@ -70,21 +85,94 @@ export async function getChatTurn(
 
   const run = async (): Promise<ChatResponse | null> => {
     try {
-      const completion = await client.chat.completions.parse({
+      const completion = await client.chat.completions.create({
         model: "gpt-4o-mini",
         messages: fullMessages,
         response_format: zodResponseFormat(chatResponseSchema, "chat_response"),
         max_tokens: 800,
         temperature: 0.3,
       });
-      const parsed = completion.choices[0]?.message?.parsed;
-      return parsed ?? null;
+      const raw = completion.choices[0]?.message?.content?.trim();
+      if (!raw) return null;
+      const parsed = chatResponseSchema.safeParse(JSON.parse(raw));
+      return parsed.success ? parsed.data : null;
     } catch {
       return null;
     }
   };
 
   let result = await run();
-  if (result === null) result = await run();
-  return result ?? fallback;
+  if (result !== null) {
+    logDojoLlm({ event: "chat_parse_ok", attempt: 1 });
+    return result;
+  }
+  logDojoLlm({ event: "chat_parse_retry", attempt: 1 });
+  result = await run();
+  if (result !== null) {
+    logDojoLlm({ event: "chat_parse_ok", attempt: 2 });
+    return result;
+  }
+  logDojoLlm({ event: "chat_fallback" });
+  return fallback;
+}
+
+/**
+ * 面接終了時の5軸評価を1回のLLMコールで生成（07_prompt_design 7.5）。
+ * 会話ログ・直近弱点タグを入力とし、evaluationSchema で Structured Output。
+ * パース失敗時は1回リトライ。
+ */
+export async function getEvaluation(
+  env: OpenAIEnv,
+  conversationLog: string,
+  recentWeaknessTags: string[],
+  targetRole?: string
+): Promise<Evaluation | null> {
+  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  const role = targetRole ?? "（未設定）";
+  const weaknessLine =
+    recentWeaknessTags.length > 0
+      ? `直近の弱点タグ: ${recentWeaknessTags.join(", ")}`
+      : "直近の弱点タグはありません。";
+
+  const systemContent = `あなたは日本のIT企業の面接官です。理系留学生の模擬面接の会話ログを読み、5軸で評価してください。
+評価軸: 論理性(1-5)、技術的正確さ(1-5)、わかりやすさ(1-5)、敬語・ビジネス日本語(1-5)、具体性(1-5)。
+strengths/weaknesses/nextActions はそれぞれ配列で、nextActions は行動ベースで最大3つ。summary は120字程度の日本語で。
+必ず指定のJSON形式のみで出力してください。`;
+
+  const userContent = `志望職種: ${role}\n${weaknessLine}\n\n--- 会話ログ ---\n${conversationLog}\n---\n\n上記会話を評価し、指定JSON形式で出力してください。`;
+
+  const run = async (): Promise<Evaluation | null> => {
+    try {
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemContent },
+          { role: "user", content: userContent },
+        ],
+        response_format: zodResponseFormat(evaluationSchema, "evaluation"),
+        max_tokens: 600,
+        temperature: 0.3,
+      });
+      const raw = completion.choices[0]?.message?.content?.trim();
+      if (!raw) return null;
+      const parsed = evaluationSchema.safeParse(JSON.parse(raw));
+      return parsed.success ? parsed.data : null;
+    } catch {
+      return null;
+    }
+  };
+
+  let result = await run();
+  if (result !== null) {
+    logDojoLlm({ event: "evaluation_parse_ok", attempt: 1 });
+    return result;
+  }
+  logDojoLlm({ event: "evaluation_parse_retry", attempt: 1 });
+  result = await run();
+  if (result !== null) {
+    logDojoLlm({ event: "evaluation_parse_ok", attempt: 2 });
+    return result;
+  }
+  logDojoLlm({ event: "evaluation_parse_fail" });
+  return result;
 }

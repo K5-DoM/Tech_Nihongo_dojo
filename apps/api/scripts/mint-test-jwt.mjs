@@ -9,7 +9,7 @@ if (!SECRET || SECRET.length < 32) {
   process.exit(1);
 }
 
-const SUB = process.env.SUB || "00000000-0000-0000-0000-000000000001"; // テスト用ユーザーID
+const SUB = process.env.TEST_USER_ID || "00000000-0000-0000-0000-000000000001"; // テスト用ユーザーID
 
 const secret = new TextEncoder().encode(SECRET);
 const jwt = await new jose.SignJWT({})

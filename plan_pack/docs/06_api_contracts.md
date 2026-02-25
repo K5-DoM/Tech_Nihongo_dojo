@@ -9,6 +9,65 @@
 
 ---
 
+## GET `/api/interviews`
+セッション一覧（認証必須、自分の interviews のみ）
+
+### Query（任意）
+- `limit`: 件数（省略時 20、最大 100）
+- `offset`: オフセット（省略時 0）
+
+### Response
+```json
+{
+  "interviews": [
+    {
+      "id": "uuid",
+      "started_at": "2025-02-16T10:00:00.000Z",
+      "ended_at": "2025-02-16T10:15:00.000Z",
+      "status": "finished",
+      "summary": "評価サマリの先頭文字列（評価がない場合は null）"
+    }
+  ]
+}
+```
+
+---
+
+## GET `/api/interviews/:id`
+セッション詳細（メタ・メッセージ・評価）
+
+### Response
+```json
+{
+  "id": "uuid",
+  "started_at": "2025-02-16T10:00:00.000Z",
+  "ended_at": "2025-02-16T10:15:00.000Z",
+  "status": "finished",
+  "messages": [
+    {
+      "role": "user",
+      "content": "私の研究は...",
+      "correction": null,
+      "created_at": "2025-02-16T10:01:00.000Z"
+    }
+  ],
+  "evaluation": {
+    "logic": 3,
+    "accuracy": 4,
+    "clarity": 2,
+    "keigo": 3,
+    "specificity": 2,
+    "strengths": ["..."],
+    "weaknesses": ["..."],
+    "nextActions": ["..."],
+    "summary": "..."
+  }
+}
+```
+- `evaluation` は終了済みで評価がある場合のみ存在。未終了の場合は省略。
+
+---
+
 ## POST `/api/interviews`
 面接セッション開始
 
@@ -58,7 +117,10 @@
 ---
 
 ## POST `/api/interviews/:id/finish`
-面接終了＆評価生成
+面接終了＆評価生成。評価の Structured Output パース失敗時は1回リトライし、2回目も失敗時は 500 を返す。詳細は 07_prompt_design 7.5, 7.6。
+
+- **事前条件**: 対象 interview が `status === 'active'` であること。既に終了済み（`finished`）の場合は **409 Conflict** を返す。
+- Body なし（パスパラメータ `id` のみ）。
 
 ### Response
 ```json

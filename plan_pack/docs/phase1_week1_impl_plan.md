@@ -52,7 +52,7 @@ Tech_Nihongo_dojo/
 ## 技術メモ
 - 認証: 06_api_contracts.md に従い Bearer JWT（Supabase Auth）、未認証は 401。
 - API ベースパス: `/api/*`。
-- Supabase: サーバー側は SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY。JWT 検証は SUPABASE_JWT_SECRET で検証。
+- Supabase: サーバー側は SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY。JWT 検証は SUPABASE_JWT_SECRET（**Legacy JWT Secret**）。どのタブのどのキーかは [supabase_keys_reference.md](supabase_keys_reference.md) を参照。
 
 ---
 
