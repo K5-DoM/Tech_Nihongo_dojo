@@ -39,11 +39,11 @@ export async function getFirstQuestion(
       {
         role: "system",
         content:
-          "あなたは日本のIT企業の理系採用面接官です。相手は理系留学生です。研究テーマの概要を1分で説明してもらうための、最初の質問を日本語で1文だけ返してください。余計な説明は不要です。",
+          "あなたは日本のIT企業の理系採用面接官です。相手は理系留学生です。研究テーマの概要を3分で説明してもらうための、最初の質問を日本語で1文だけ返してください。余計な説明は不要です。",
       },
       {
         role: "user",
-        content: `研究テーマ: ${theme}\n技術スタック: ${stack}\n志望職種: ${role}\n\n上記の候補者へ、研究概要を1分で説明してもらうための最初の質問を1文で。`,
+        content: `研究テーマ: ${theme}\n技術スタック: ${stack}\n志望職種: ${role}\n\n上記の候補者へ、研究概要を3分で説明してもらうための最初の質問を1文で。`,
       },
     ],
     max_tokens: 150,
@@ -51,7 +51,7 @@ export async function getFirstQuestion(
   });
 
   const text = res.choices[0]?.message?.content?.trim();
-  return text || "まず研究テーマを1分で説明してください。";
+  return text || "まず研究テーマを3分で説明してください。";
 }
 
 /**

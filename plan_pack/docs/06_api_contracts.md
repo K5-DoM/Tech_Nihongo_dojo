@@ -87,7 +87,7 @@
 ```json
 {
   "interviewId": "uuid",
-  "firstQuestion": "まず研究テーマを1分で説明してください。"
+  "firstQuestion": "まず研究テーマを3分で説明してください。"
 }
 ```
 

@@ -155,7 +155,7 @@ export const interviewsRoutes = new Hono<{ Bindings: Env; Variables: Variables }
       firstQuestion = await getFirstQuestion(c.env, profileSnapshot);
     } catch (e) {
       console.error("OpenAI first question error:", e);
-      firstQuestion = "まず研究テーマを1分で説明してください。";
+      firstQuestion = "まず研究テーマを3分で説明してください。";
     }
 
     return c.json({
