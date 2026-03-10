@@ -21,7 +21,9 @@ create table if not exists public.interviews (
   mode text not null default 'standard',
   started_at timestamptz not null default now(),
   ended_at timestamptz,
-  status text not null default 'active' -- active | finished | aborted
+  status text not null default 'active', -- active | finished | aborted
+  -- 面接開始時点のプロフィールを固定（面接中に編集しても当該セッションは変わらない）
+  profile_snapshot jsonb
 );
 
 create table if not exists public.messages (

@@ -135,15 +135,54 @@ export const interviewsRoutes = new Hono<{ Bindings: Env; Variables: Variables }
       .from("profiles")
       .upsert({ id: userId, updated_at: new Date().toISOString() }, { onConflict: "id" });
 
-    const { data: interview, error: insertError } = await supabase
-      .from("interviews")
-      .insert({
-        user_id: userId,
-        mode,
-        status: "active",
-      })
-      .select("id")
+    const { data: profileRow } = await supabase
+      .from("profiles")
+      .select("display_name, major, research_theme, tech_stack, target_role, target_company_type, jp_level")
+      .eq("id", userId)
       .single();
+
+    const baseSnapshot = {
+      displayName: profileRow?.display_name ?? undefined,
+      major: profileRow?.major ?? undefined,
+      researchTheme: profileRow?.research_theme ?? undefined,
+      techStack: profileRow?.tech_stack ?? undefined,
+      targetRole: profileRow?.target_role ?? undefined,
+      targetCompanyType: profileRow?.target_company_type ?? undefined,
+      jpLevel: profileRow?.jp_level ?? undefined,
+    };
+    const mergedSnapshot = {
+      ...baseSnapshot,
+      ...(profileSnapshot ?? {}),
+    };
+
+    const insertWithSnapshot = async () =>
+      supabase
+        .from("interviews")
+        .insert({
+          user_id: userId,
+          mode,
+          status: "active",
+          profile_snapshot: mergedSnapshot,
+        })
+        .select("id")
+        .single();
+
+    const insertWithoutSnapshot = async () =>
+      supabase
+        .from("interviews")
+        .insert({
+          user_id: userId,
+          mode,
+          status: "active",
+        })
+        .select("id")
+        .single();
+
+    let { data: interview, error: insertError } = await insertWithSnapshot();
+    if (insertError && (insertError as { code?: string }).code === "PGRST204") {
+      // DB が未マイグレーション（profile_snapshot列なし）の場合は互換のためスナップショット無しで継続
+      ({ data: interview, error: insertError } = await insertWithoutSnapshot());
+    }
 
     if (insertError || !interview) {
       console.error("interviews insert error:", insertError);
@@ -152,7 +191,11 @@ export const interviewsRoutes = new Hono<{ Bindings: Env; Variables: Variables }
 
     let firstQuestion: string;
     try {
-      firstQuestion = await getFirstQuestion(c.env, profileSnapshot);
+      firstQuestion = await getFirstQuestion(c.env, {
+        researchTheme: mergedSnapshot.researchTheme,
+        techStack: mergedSnapshot.techStack,
+        targetRole: mergedSnapshot.targetRole,
+      });
     } catch (e) {
       console.error("OpenAI first question error:", e);
       firstQuestion = "まず研究テーマを3分で説明してください。";
@@ -168,12 +211,21 @@ export const interviewsRoutes = new Hono<{ Bindings: Env; Variables: Variables }
     const interviewId = c.req.param("id");
     const supabase = createSupabaseClient(c.env);
 
-    const { data: interview, error: interviewError } = await supabase
+    let { data: interview, error: interviewError } = await supabase
       .from("interviews")
-      .select("id, user_id, status")
+      .select("id, user_id, status, profile_snapshot")
       .eq("id", interviewId)
       .eq("user_id", userId)
       .single();
+    if (interviewError && (interviewError as { code?: string }).code === "PGRST204") {
+      // profile_snapshot 列が無い環境向け互換
+      ({ data: interview, error: interviewError } = await supabase
+        .from("interviews")
+        .select("id, user_id, status")
+        .eq("id", interviewId)
+        .eq("user_id", userId)
+        .single());
+    }
 
     if (interviewError || !interview) {
       return c.json({ error: "Interview not found or access denied" }, 404);
@@ -209,10 +261,19 @@ export const interviewsRoutes = new Hono<{ Bindings: Env; Variables: Variables }
       ),
     ];
 
+    const targetRole =
+      (interview as { profile_snapshot?: unknown }).profile_snapshot &&
+      typeof (interview as { profile_snapshot?: unknown }).profile_snapshot === "object" &&
+      "targetRole" in ((interview as { profile_snapshot?: unknown }).profile_snapshot as Record<string, unknown>) &&
+      typeof ((interview as { profile_snapshot?: unknown }).profile_snapshot as Record<string, unknown>).targetRole === "string"
+        ? (((interview as { profile_snapshot?: unknown }).profile_snapshot as Record<string, unknown>).targetRole as string)
+        : undefined;
+
     const evaluation = await getEvaluation(
       c.env,
       conversationLog,
-      recentWeaknessTags
+      recentWeaknessTags,
+      targetRole
     );
     if (!evaluation) {
       return c.json(

@@ -116,4 +116,43 @@ export async function finishInterview(id: string): Promise<FinishInterviewRes> {
   return res.json();
 }
 
+export type Profile = Partial<{
+  displayName: string;
+  major: string;
+  researchTheme: string;
+  techStack: string[];
+  targetRole: string;
+  targetCompanyType: string;
+  jpLevel: string;
+  updatedAt: string;
+}>;
+
+export type GetProfileRes = { profile: Profile };
+
+export async function getProfile(): Promise<GetProfileRes> {
+  const res = await fetch("/api/profile", { method: "GET", headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error((err as { error?: string }).error ?? "Failed to load profile");
+  }
+  return res.json();
+}
+
+export type UpdateProfileRes = { profile: Profile };
+
+export async function updateProfile(profile: Omit<Profile, "updatedAt">): Promise<UpdateProfileRes> {
+  // UI側で profile を丸ごと保持しているため、誤って updatedAt を送っても strict schema で弾かれないように除去
+  const { updatedAt: _ignored, ...payload } = profile as Profile;
+  const res = await fetch("/api/profile", {
+    method: "PUT",
+    headers: headers(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error((err as { error?: string }).error ?? "Failed to update profile");
+  }
+  return res.json();
+}
+
 export { getToken };

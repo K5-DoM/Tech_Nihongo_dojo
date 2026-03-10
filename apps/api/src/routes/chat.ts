@@ -30,12 +30,21 @@ export const chatRoutes = new Hono<{ Bindings: Env; Variables: Variables }>()
 
     const supabase = createSupabaseClient(c.env);
 
-    const { data: interview, error: interviewError } = await supabase
+    let { data: interview, error: interviewError } = await supabase
       .from("interviews")
-      .select("id")
+      .select("id, profile_snapshot")
       .eq("id", interviewId)
       .eq("user_id", userId)
       .single();
+    if (interviewError && (interviewError as { code?: string }).code === "PGRST204") {
+      // profile_snapshot 列が無い環境向け互換
+      ({ data: interview, error: interviewError } = await supabase
+        .from("interviews")
+        .select("id")
+        .eq("id", interviewId)
+        .eq("user_id", userId)
+        .single());
+    }
 
     if (interviewError || !interview) {
       return c.json({ error: "Interview not found or access denied" }, 404);
@@ -69,9 +78,14 @@ export const chatRoutes = new Hono<{ Bindings: Env; Variables: Variables }>()
     const assistantMessageCount = messages.filter((m) => m.role === "assistant").length;
     const currentFormatGuideline = getFormatGuidelineForTurn(assistantMessageCount);
 
+    const rawSnapshot = (interview as { profile_snapshot?: unknown }).profile_snapshot;
+    const profileContext =
+      rawSnapshot && typeof rawSnapshot === "object" ? (rawSnapshot as any) : undefined;
+
     const response = await getChatTurn(c.env, messages, userMessage, {
       recentWeaknessTags,
       currentFormatGuideline,
+      profileContext,
     });
 
     const { error: insertUserErr } = await supabase.from("messages").insert({

@@ -4,6 +4,7 @@ import type { OpenAIEnv } from "./lib/openai";
 import { requireAuth } from "./middleware/auth";
 import { interviewsRoutes } from "./routes/interviews";
 import { chatRoutes } from "./routes/chat";
+import { profileRoutes } from "./routes/profile";
 
 type Bindings = SupabaseEnv & OpenAIEnv & {
   SUPABASE_JWT_SECRET?: string;
@@ -38,6 +39,7 @@ api.get("/api/me", (c) => {
 
 api.route("/", interviewsRoutes);
 api.route("/", chatRoutes);
+api.route("/", profileRoutes);
 
 app.route("/", api);
 

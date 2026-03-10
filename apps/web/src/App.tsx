@@ -6,6 +6,9 @@ import {
   listInterviews,
   getInterview,
   finishInterview,
+  getProfile,
+  updateProfile,
+  type Profile,
   type ChatRes,
   type InterviewListItem,
   type InterviewDetailRes,
@@ -13,7 +16,7 @@ import {
 } from "./api/client";
 import styles from "./App.module.css";
 
-type View = "list" | "detail" | "chat";
+type View = "list" | "detail" | "chat" | "profile";
 
 export default function App() {
   const [token, setToken] = useState(getToken() ?? "");
@@ -36,6 +39,11 @@ export default function App() {
   const [finished, setFinished] = useState(false);
   const [evaluation, setEvaluation] = useState<EvaluationRes | null>(null);
   const [finishLoading, setFinishLoading] = useState(false);
+
+  const [profile, setProfile] = useState<Profile>({});
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [techStackText, setTechStackText] = useState("");
 
   const saveToken = () => {
     if (token.trim()) {
@@ -99,6 +107,59 @@ export default function App() {
       setError(e instanceof Error ? e.message : "面接の開始に失敗しました");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openProfile = async () => {
+    if (!token.trim()) {
+      setError("JWT を入力して保存してください");
+      return;
+    }
+    saveToken();
+    setView("profile");
+    setProfileLoading(true);
+    setError(null);
+    try {
+      const { profile } = await getProfile();
+      setProfile(profile);
+      setTechStackText((profile.techStack ?? []).join(", "));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "プロフィールの取得に失敗しました");
+      setProfile({});
+      setTechStackText("");
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    setProfileSaving(true);
+    setError(null);
+    const techStack = techStackText
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    try {
+      const normalize = (v: unknown): string | undefined => {
+        if (typeof v !== "string") return undefined;
+        const t = v.trim();
+        return t.length > 0 ? t : undefined;
+      };
+      const { profile: saved } = await updateProfile({
+        displayName: normalize(profile.displayName),
+        major: normalize(profile.major),
+        researchTheme: normalize(profile.researchTheme),
+        techStack: techStack.length > 0 ? techStack : undefined,
+        targetRole: normalize(profile.targetRole),
+        targetCompanyType: normalize(profile.targetCompanyType),
+        jpLevel: normalize(profile.jpLevel),
+      });
+      setProfile(saved);
+      setTechStackText((saved.techStack ?? []).join(", "));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "プロフィールの保存に失敗しました");
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -234,9 +295,14 @@ export default function App() {
         {view === "list" && (
           <section>
             <p>セッション一覧。行をクリックで詳細、または新しい面接を開始できます。</p>
-            <button onClick={onStart} disabled={loading || listLoading}>
-              {loading ? "開始中…" : "面接を開始"}
-            </button>
+            <div className={styles.navButtons}>
+              <button onClick={onStart} disabled={loading || listLoading}>
+                {loading ? "開始中…" : "面接を開始"}
+              </button>
+              <button type="button" onClick={openProfile} disabled={loading || listLoading}>
+                プロフィール編集
+              </button>
+            </div>
             {listLoading ? (
               <p>読み込み中…</p>
             ) : (
@@ -269,6 +335,9 @@ export default function App() {
             <div className={styles.navButtons}>
               <button type="button" onClick={goToList}>
                 一覧に戻る
+              </button>
+              <button type="button" onClick={openProfile}>
+                プロフィール編集
               </button>
             </div>
             {detailLoading ? (
@@ -361,10 +430,103 @@ export default function App() {
                   {finishLoading ? "処理中…" : "面接を終了して評価を見る"}
                 </button>
               )}
+              <button type="button" onClick={openProfile}>
+                プロフィール編集
+              </button>
               <button type="button" onClick={goToList} className={styles.newSession}>
                 面接一覧に戻る
               </button>
             </div>
+          </section>
+        )}
+
+        {view === "profile" && (
+          <section className={styles.detail}>
+            <div className={styles.navButtons}>
+              <button type="button" onClick={goToList}>
+                一覧に戻る
+              </button>
+            </div>
+
+            <h2>プロフィール</h2>
+            {profileLoading ? (
+              <p>読み込み中…</p>
+            ) : (
+              <>
+                <label>
+                  表示名:
+                  <input
+                    type="text"
+                    value={profile.displayName ?? ""}
+                    onChange={(e) => setProfile((p) => ({ ...p, displayName: e.target.value }))}
+                    className={styles.input}
+                  />
+                </label>
+                <label>
+                  専攻:
+                  <input
+                    type="text"
+                    value={profile.major ?? ""}
+                    onChange={(e) => setProfile((p) => ({ ...p, major: e.target.value }))}
+                    className={styles.input}
+                  />
+                </label>
+                <label>
+                  研究テーマ:
+                  <input
+                    type="text"
+                    value={profile.researchTheme ?? ""}
+                    onChange={(e) => setProfile((p) => ({ ...p, researchTheme: e.target.value }))}
+                    className={styles.input}
+                  />
+                </label>
+                <label>
+                  技術スタック（カンマ区切り）:
+                  <input
+                    type="text"
+                    value={techStackText}
+                    onChange={(e) => setTechStackText(e.target.value)}
+                    className={styles.input}
+                  />
+                </label>
+                <label>
+                  志望職種:
+                  <input
+                    type="text"
+                    value={profile.targetRole ?? ""}
+                    onChange={(e) => setProfile((p) => ({ ...p, targetRole: e.target.value }))}
+                    className={styles.input}
+                  />
+                </label>
+                <label>
+                  志望企業タイプ:
+                  <input
+                    type="text"
+                    value={profile.targetCompanyType ?? ""}
+                    onChange={(e) => setProfile((p) => ({ ...p, targetCompanyType: e.target.value }))}
+                    className={styles.input}
+                  />
+                </label>
+                <label>
+                  日本語レベル:
+                  <input
+                    type="text"
+                    value={profile.jpLevel ?? ""}
+                    onChange={(e) => setProfile((p) => ({ ...p, jpLevel: e.target.value }))}
+                    className={styles.input}
+                  />
+                </label>
+
+                <div className={styles.navButtons}>
+                  <button type="button" onClick={saveProfile} disabled={profileSaving}>
+                    {profileSaving ? "保存中…" : "保存"}
+                  </button>
+                  <button type="button" onClick={openProfile} disabled={profileSaving}>
+                    再読み込み
+                  </button>
+                </div>
+              </>
+            )}
           </section>
         )}
       </main>

@@ -9,6 +9,62 @@
 
 ---
 
+## GET `/api/profile`
+プロフィール取得（認証必須、自分の profiles のみ）
+
+### Response
+```json
+{
+  "profile": {
+    "displayName": "山田 太郎",
+    "major": "情報工学",
+    "researchTheme": "Transformerの効率化",
+    "techStack": ["Python", "PyTorch"],
+    "targetRole": "ML Engineer",
+    "targetCompanyType": "自社開発",
+    "jpLevel": "N1",
+    "updatedAt": "2025-02-16T10:00:00.000Z"
+  }
+}
+```
+- 未設定項目は省略される場合がある（`profile: {}` のように空で返ることもある）
+
+---
+
+## PUT `/api/profile`
+プロフィール更新（認証必須、自分の profiles のみ）
+
+### Request
+```json
+{
+  "displayName": "山田 太郎",
+  "major": "情報工学",
+  "researchTheme": "Transformerの効率化",
+  "techStack": ["Python", "PyTorch"],
+  "targetRole": "ML Engineer",
+  "targetCompanyType": "自社開発",
+  "jpLevel": "N1"
+}
+```
+
+### Response
+```json
+{
+  "profile": {
+    "displayName": "山田 太郎",
+    "major": "情報工学",
+    "researchTheme": "Transformerの効率化",
+    "techStack": ["Python", "PyTorch"],
+    "targetRole": "ML Engineer",
+    "targetCompanyType": "自社開発",
+    "jpLevel": "N1",
+    "updatedAt": "2025-02-16T10:00:00.000Z"
+  }
+}
+```
+
+---
+
 ## GET `/api/interviews`
 セッション一覧（認証必須、自分の interviews のみ）
 
@@ -82,6 +138,7 @@
   }
 }
 ```
+- `profileSnapshot` は任意。サーバー側で `profiles`（最新プロフィール）とマージし、面接開始時点の `interviews.profile_snapshot` として固定保存する。\n+  面接中にプロフィールを編集しても、このセッションの LLM 文脈は変わらない（再現性のため）。\n 
 
 ### Response
 ```json
