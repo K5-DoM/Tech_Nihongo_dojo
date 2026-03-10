@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, KeyboardEvent } from "react";
 import {
   getToken,
   startInterview,
@@ -18,6 +18,157 @@ import styles from "./App.module.css";
 
 type View = "list" | "detail" | "chat" | "profile";
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  text: string;
+  correction?: string;
+  weakness_tags?: string[];
+};
+
+type Expression = "neutral" | "listening" | "thinking" | "smile";
+
+type SubtitleKind = "question" | "feedback";
+
+type HistoryTurn = {
+  question: string;
+  answer?: string;
+  hasCorrection?: boolean;
+  correctionText?: string;
+  weaknessTags?: string[];
+};
+
+type InterviewerViewProps = {
+  expression: Expression;
+};
+
+function InterviewerView({ expression }: InterviewerViewProps) {
+  const label =
+    expression === "thinking"
+      ? "考え中"
+      : expression === "listening"
+      ? "傾聴中"
+      : expression === "smile"
+      ? "良い印象"
+      : "待機中";
+
+  return (
+    <div className={styles.interviewerFrame}>
+      <div className={styles.interviewerImage}>
+        <span>面接官</span>
+      </div>
+      <div className={styles.expressionBadge}>{label}</div>
+    </div>
+  );
+}
+
+type SubtitleBarProps = {
+  text: string | null;
+  kind: SubtitleKind;
+  loading: boolean;
+};
+
+function SubtitleBar({ text, kind, loading }: SubtitleBarProps) {
+  if (!text && !loading) return null;
+
+  const label =
+    loading ? "面接官が回答を準備しています…" : kind === "question" ? "質問" : "フィードバック";
+
+  const className =
+    styles.subtitleBar +
+    " " +
+    (kind === "question" ? styles.subtitleQuestion : styles.subtitleFeedback);
+
+  return (
+    <div className={className}>
+      <div className={styles.subtitleLabel}>{label}</div>
+      <div className={styles.subtitleText}>
+        {text ?? (loading ? "少しお待ちください…" : "")}
+      </div>
+    </div>
+  );
+}
+
+type HistoryPanelProps = {
+  turns: HistoryTurn[];
+};
+
+function HistoryPanel({ turns }: HistoryPanelProps) {
+  if (turns.length === 0) {
+    return (
+      <aside className={styles.historyPanel}>
+        <div className={styles.historyTitle}>これまでのやり取り</div>
+        <p className={styles.historyAnswer}>まだ履歴はありません。</p>
+      </aside>
+    );
+  }
+
+  return (
+    <aside className={styles.historyPanel}>
+      <div className={styles.historyTitle}>これまでのやり取り</div>
+      <div className={styles.historyList}>
+        {turns.map((t, idx) => (
+          <div key={idx} className={styles.historyItem}>
+            <div className={styles.historyMeta}>
+              <span>Q{idx + 1}</span>
+              {t.hasCorrection && <span className={styles.historyTag}>修正あり</span>}
+            </div>
+            <div className={styles.historyQuestion}>{t.question}</div>
+            {t.answer && <div className={styles.historyAnswer}>あなた: {t.answer}</div>}
+            {t.correctionText && (
+              <div className={styles.historyCorrection}>修正例: {t.correctionText}</div>
+            )}
+            {t.weaknessTags && t.weaknessTags.length > 0 && (
+              <div className={styles.historyTag}>
+                弱点: {t.weaknessTags.join(" / ")}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+type AnswerPanelProps = {
+  value: string;
+  disabled: boolean;
+  loading: boolean;
+  onChange: (value: string) => void;
+  onSend: () => void;
+};
+
+function AnswerPanel({ value, disabled, loading, onChange, onSend }: AnswerPanelProps) {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      if (!disabled && value.trim()) {
+        onSend();
+      }
+    }
+  };
+
+  return (
+    <div className={styles.answerPanel}>
+      <div className={styles.answerTextareaRow}>
+        <textarea
+          className={styles.answerTextarea}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="ここに面接官への回答を入力してください"
+          disabled={disabled}
+        />
+        <button type="button" onClick={onSend} disabled={disabled || !value.trim()}>
+          {loading ? "送信中…" : "送信"}
+        </button>
+      </div>
+      <div className={styles.answerHint}>
+        Enter で改行、Ctrl + Enter で送信できます。
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [token, setToken] = useState(getToken() ?? "");
   const [view, setView] = useState<View>("list");
@@ -31,9 +182,7 @@ export default function App() {
   const [interviewId, setInterviewId] = useState<string | null>(null);
   const [firstQuestion, setFirstQuestion] = useState<string | null>(null);
   const [userInput, setUserInput] = useState("");
-  const [messages, setMessages] = useState<
-    Array<{ role: "user" | "assistant"; text: string; correction?: string; weakness_tags?: string[] }>
-  >([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
@@ -320,7 +469,11 @@ export default function App() {
                     {item.summary ? (
                       <div className={styles.listItemSummary}>{item.summary}</div>
                     ) : (
-                      <div className={styles.listItemSummary}>（評価なし）</div>
+                      <div className={styles.listItemSummary}>
+                        {item.status === "finished"
+                          ? "評価済み（クリックで表示）"
+                          : "（評価なし）"}
+                      </div>
                     )}
                   </button>
                 ))}
@@ -379,64 +532,101 @@ export default function App() {
 
         {view === "chat" && (
           <section className={styles.chat}>
-            {firstQuestion && messages.length === 0 && (
-              <div className={styles.bubble + " " + styles.assistant}>
-                <p className={styles.label}>面接官</p>
-                <p>{firstQuestion}</p>
-              </div>
-            )}
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={styles.bubble + " " + (m.role === "user" ? styles.user : styles.assistant)}
-              >
-                <p className={styles.label}>{m.role === "user" ? "あなた" : "面接官"}</p>
-                <p>{m.text}</p>
-                {m.correction && (
-                  <p className={styles.correction}>修正例: {m.correction}</p>
-                )}
-                {m.weakness_tags && m.weakness_tags.length > 0 && (
-                  <p className={styles.tags}>弱点タグ: {m.weakness_tags.join(", ")}</p>
-                )}
-              </div>
-            ))}
-            {evaluation && renderEvaluation(evaluation)}
-            {finished && !evaluation && (
-              <p className={styles.finished}>面接は終了しました。評価を表示するには「面接を終了して評価を見る」を押してください。</p>
-            )}
-            {!finished && (
-              <div className={styles.inputRow}>
-                <input
-                  type="text"
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && onSend()}
-                  placeholder="回答を入力..."
-                  disabled={loading}
-                  className={styles.input}
-                />
-                <button onClick={onSend} disabled={loading || !userInput.trim()}>
-                  {loading ? "送信中…" : "送信"}
-                </button>
-              </div>
-            )}
-            <div className={styles.navButtons}>
-              {!evaluation && (
-                <button
-                  type="button"
-                  onClick={onFinishInterview}
-                  disabled={finishLoading || !interviewId}
-                >
-                  {finishLoading ? "処理中…" : "面接を終了して評価を見る"}
-                </button>
-              )}
-              <button type="button" onClick={openProfile}>
-                プロフィール編集
-              </button>
-              <button type="button" onClick={goToList} className={styles.newSession}>
-                面接一覧に戻る
-              </button>
-            </div>
+            {(() => {
+              const assistantMessages = [
+                ...(firstQuestion ? [{ text: firstQuestion }] : []),
+                ...messages.filter((m) => m.role === "assistant").map((m) => ({ text: m.text })),
+              ];
+              const assistantDetails = messages.filter((m) => m.role === "assistant");
+              const userMessages = messages.filter((m) => m.role === "user");
+              const turns: HistoryTurn[] = assistantMessages.map((a, idx) => {
+                const question = a.text;
+                const user = userMessages[idx];
+                const detailIndex = firstQuestion ? idx - 1 : idx;
+                const detail = detailIndex >= 0 ? assistantDetails[detailIndex] : undefined;
+                return {
+                  question,
+                  answer: user?.text,
+                  hasCorrection: !!detail?.correction,
+                  correctionText: detail?.correction,
+                  weaknessTags: detail?.weakness_tags,
+                };
+              });
+
+              const latestAssistantIndex = assistantMessages.length - 1;
+              const currentSubtitleText =
+                latestAssistantIndex >= 0 ? assistantMessages[latestAssistantIndex].text : null;
+              const subtitleKind: SubtitleKind =
+                latestAssistantIndex <= 0 ? "question" : "feedback";
+              const historyTurns =
+                turns.length > 1 ? turns.slice(0, turns.length - 1) : [];
+
+              const expression: Expression =
+                loading && !finished
+                  ? "thinking"
+                  : finished
+                  ? "smile"
+                  : userInput.trim().length > 0
+                  ? "listening"
+                  : "neutral";
+
+              const statusText = finished
+                ? "このセッションは終了しました。評価を確認して次の面接に備えましょう。"
+                : loading
+                ? "面接官があなたの回答をもとに、次のメッセージを準備しています…"
+                : userInput.trim().length > 0
+                ? "Enter で改行、Ctrl + Enter で送信できます。"
+                : "面接官の質問に対する回答を考えて入力してみましょう。";
+
+              return (
+                <div className={styles.chatLayout}>
+                  <div className={styles.chatMain}>
+                    <InterviewerView expression={expression} />
+                    <SubtitleBar
+                      text={currentSubtitleText}
+                      kind={subtitleKind}
+                      loading={loading}
+                    />
+                    <p className={styles.chatStatus}>{statusText}</p>
+                    {evaluation && renderEvaluation(evaluation)}
+                    {finished && !evaluation && (
+                      <p className={styles.finished}>
+                        面接は終了しました。評価を表示するには「面接を終了して評価を見る」を押してください。
+                      </p>
+                    )}
+                    <AnswerPanel
+                      value={userInput}
+                      onChange={setUserInput}
+                      onSend={onSend}
+                      disabled={loading || finished || !interviewId}
+                      loading={loading}
+                    />
+                    <div className={styles.navButtons}>
+                      {!evaluation && (
+                        <button
+                          type="button"
+                          onClick={onFinishInterview}
+                          disabled={finishLoading || !interviewId}
+                        >
+                          {finishLoading ? "処理中…" : "面接を終了して評価を見る"}
+                        </button>
+                      )}
+                      <button type="button" onClick={openProfile}>
+                        プロフィール編集
+                      </button>
+                      <button
+                        type="button"
+                        onClick={goToList}
+                        className={styles.newSession}
+                      >
+                        面接一覧に戻る
+                      </button>
+                    </div>
+                  </div>
+                  <HistoryPanel turns={historyTurns} />
+                </div>
+              );
+            })()}
           </section>
         )}
 

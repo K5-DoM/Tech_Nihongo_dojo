@@ -1,7 +1,13 @@
 .app {
-  max-width: 640px;
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1.5rem;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .header {
@@ -51,6 +57,99 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.chatLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(260px, 0.9fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.chatMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 320px;
+}
+
+.interviewerFrame {
+  position: relative;
+  border-radius: 16px;
+  padding: 0.85rem;
+  background: radial-gradient(circle at 0% 0%, #e3f2fd 0, #bbdefb 35%, #90caf9 70%, #64b5f6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+}
+
+.interviewerImage {
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 4 / 3;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.interviewerImage span {
+  opacity: 0.9;
+}
+
+.expressionBadge {
+  position: absolute;
+  top: 0.9rem;
+  left: 0.9rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+}
+
+.subtitleBar {
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  min-height: 3.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.subtitleQuestion {
+  border-left: 3px solid #64b5f6;
+}
+
+.subtitleFeedback {
+  border-left: 3px solid #ffb74d;
+}
+
+.subtitleLabel {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.subtitleText {
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.chatStatus {
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  color: #666;
 }
 
 .bubble {
@@ -105,6 +204,36 @@
   font-size: 1rem;
 }
 
+.answerPanel {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.answerTextareaRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.answerTextarea {
+  flex: 1;
+  min-height: 80px;
+  max-height: 200px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.answerHint {
+  font-size: 0.75rem;
+  color: #666;
+}
+
 .inputRow button {
   padding: 0.5rem 1rem;
   border-radius: 6px;
@@ -125,18 +254,100 @@
   margin: 0.5rem 0 0 0;
 }
 
+.historyPanel {
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 0.75rem 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 480px;
+  overflow: auto;
+}
+
+.historyTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.historyItem {
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #eee;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.historyMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #777;
+  margin-bottom: 0.1rem;
+}
+
+.historyQuestion {
+  font-weight: 500;
+  color: #333;
+  line-height: 1.4;
+}
+
+.historyAnswer {
+  color: #555;
+  line-height: 1.4;
+}
+
+.historyCorrection {
+  color: #2e7d32;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.historyTag {
+  font-size: 0.75rem;
+  color: #2e7d32;
+}
+
+@media (max-width: 900px) {
+  .app {
+    max-width: 100%;
+    padding: 1rem;
+  }
+
+  .chatLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .historyPanel {
+    max-height: 220px;
+  }
+}
+
 .newSession {
   margin-top: 1rem;
   padding: 0.4rem 0.75rem;
-  font-size: 0.875rem;
-  background: transparent;
-  border: 1px solid #999;
+  font-size: 0.9rem;
+  background: #f3f3f3;
+  border: 1px solid #1976d2;
   border-radius: 6px;
   cursor: pointer;
+  color: #1976d2;
+  font-weight: 500;
 }
 
 .newSession:hover {
-  background: #f0f0f0;
+  background: #e3f2fd;
 }
 
 button {
@@ -147,11 +358,61 @@ button {
   color: #fff;
   cursor: pointer;
   font-size: 0.9375rem;
+  transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
 }
 
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+button:active,
+.newSession:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.historyItem {
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #eee;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.historyItem:hover {
+  background: #f9fbff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.subtitleBar {
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  min-height: 3.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.subtitleBar:not(:empty) {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  .newSession,
+  .historyItem,
+  .subtitleBar {
+    transition: none;
+    transform: none;
+  }
 }
 
 .list {
