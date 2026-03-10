@@ -110,7 +110,7 @@
   "message": "ありがとうございます。では...",
   "correction": "（修正例）〜〜です。",
   "is_finished": false,
-  "weakness_tags": ["keigo_casual", "too_abstract"]
+  "weakness_tags": ["keigo_casual", "ambiguous"]
 }
 ```
 

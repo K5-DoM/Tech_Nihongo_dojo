@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Hono } from "hono";
 import { createSupabaseClient, type SupabaseEnv } from "../lib/supabase";
+import { getFormatGuidelineForTurn } from "../lib/interviewPhases";
 import { getChatTurn } from "../lib/openai";
 import type { OpenAIEnv } from "../lib/openai";
 
@@ -58,11 +59,19 @@ export const chatRoutes = new Hono<{ Bindings: Env; Variables: Variables }>()
       .order("last_seen_at", { ascending: false })
       .limit(10);
     const recentWeaknessTags = [
-      ...new Set((weaknessRows ?? []).map((r) => r.weakness_tag)),
+      ...new Set(
+        (weaknessRows ?? []).map((r) =>
+          r.weakness_tag === "too_abstract" ? "ambiguous" : r.weakness_tag
+        )
+      ),
     ];
+
+    const assistantMessageCount = messages.filter((m) => m.role === "assistant").length;
+    const currentFormatGuideline = getFormatGuidelineForTurn(assistantMessageCount);
 
     const response = await getChatTurn(c.env, messages, userMessage, {
       recentWeaknessTags,
+      currentFormatGuideline,
     });
 
     const { error: insertUserErr } = await supabase.from("messages").insert({

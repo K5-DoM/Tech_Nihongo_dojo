@@ -202,7 +202,11 @@ export const interviewsRoutes = new Hono<{ Bindings: Env; Variables: Variables }
       .order("last_seen_at", { ascending: false })
       .limit(10);
     const recentWeaknessTags = [
-      ...new Set((weaknessRows ?? []).map((r) => r.weakness_tag)),
+      ...new Set(
+        (weaknessRows ?? []).map((r) =>
+          r.weakness_tag === "too_abstract" ? "ambiguous" : r.weakness_tag
+        )
+      ),
     ];
 
     const evaluation = await getEvaluation(

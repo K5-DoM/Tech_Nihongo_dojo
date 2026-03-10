@@ -197,7 +197,7 @@ export default function App() {
         <span>正確さ: {ev.accuracy}</span>
         <span>わかりやすさ: {ev.clarity}</span>
         <span>敬語: {ev.keigo}</span>
-        <span>具体性: {ev.specificity}</span>
+        <span>明確さ: {ev.specificity}</span>
       </div>
       {ev.strengths.length > 0 && <p><strong>良かった点:</strong> {ev.strengths.join(" / ")}</p>}
       {ev.weaknesses.length > 0 && <p><strong>改善点:</strong> {ev.weaknesses.join(" / ")}</p>}

@@ -14,10 +14,11 @@ export type OpenAIEnv = {
   OPENAI_API_KEY: string;
 };
 
-const CHAT_SYSTEM_PROMPT = `あなたは日本のIT企業の面接官です。相手はN2〜N1の理系留学生です。
+const CHAT_SYSTEM_PROMPT = `あなたは日本のIT企業の理系採用面接官です。相手は日本語能力がN2〜N1である理系留学生です。
+有効性・新規性、研究で苦労した点、研究によって得た知見など、採用担当が知りたい本質的な点を聞いてください。ライブラリ名・環境・細かい既存技術の解説要求は避けてください。
 技術的な矛盾・敬語・わかりやすさを評価しつつ、会話の流れを壊さず、必要最小限の修正例を示してください。
 返答は必ず指定のJSON形式で出力してください。
-弱点タグは最大3つまで。例: keigo_casual, too_abstract, missing_result, logic_jump, overclaim
+弱点タグは最大3つまで。例: keigo_casual, ambiguous, missing_result, logic_jump, overclaim
 面接を終了する場合は is_finished を true にし、message に締めの言葉を入れてください。`;
 
 /**
@@ -38,11 +39,11 @@ export async function getFirstQuestion(
       {
         role: "system",
         content:
-          "あなたは日本のIT企業の面接官です。相手は理系留学生です。以下のプロフィールに基づき、面接の最初の質問を日本語で1文だけ返してください。余計な説明は不要です。",
+          "あなたは日本のIT企業の理系採用面接官です。相手は理系留学生です。研究テーマの概要を1分で説明してもらうための、最初の質問を日本語で1文だけ返してください。余計な説明は不要です。",
       },
       {
         role: "user",
-        content: `研究テーマ: ${theme}\n技術スタック: ${stack}\n志望職種: ${role}\n\n上記の候補者への最初の質問を1文で。`,
+        content: `研究テーマ: ${theme}\n技術スタック: ${stack}\n志望職種: ${role}\n\n上記の候補者へ、研究概要を1分で説明してもらうための最初の質問を1文で。`,
       },
     ],
     max_tokens: 150,
@@ -61,7 +62,7 @@ export async function getChatTurn(
   env: OpenAIEnv,
   messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
   userMessage: string,
-  options?: { recentWeaknessTags?: string[] }
+  options?: { recentWeaknessTags?: string[]; currentFormatGuideline?: string }
 ): Promise<ChatResponse> {
   const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
   const recentTags = options?.recentWeaknessTags ?? [];
@@ -69,7 +70,11 @@ export async function getChatTurn(
     recentTags.length > 0
       ? `\nこの候補者の直近の弱点タグ: ${recentTags.join(", ")} を意識して質問・指摘してください。`
       : "";
-  const systemContent = CHAT_SYSTEM_PROMPT + weaknessHint;
+  const formatHint =
+    options?.currentFormatGuideline != null && options.currentFormatGuideline !== ""
+      ? `\n今回の観点: ${options.currentFormatGuideline}\n相手の直近の返答を踏まえ、この観点に沿った質問またはコメントを1文で生成してください。ライブラリ名・環境・細かい既存技術の説明要求は避け、背景・有効性・新規性・苦労・使用手法の概要・知見など、採用担当が知りたい点に焦点を当ててください。`
+      : "";
+  const systemContent = CHAT_SYSTEM_PROMPT + weaknessHint + formatHint;
   const fullMessages = [
     { role: "system" as const, content: systemContent },
     ...messages,
@@ -135,7 +140,7 @@ export async function getEvaluation(
       : "直近の弱点タグはありません。";
 
   const systemContent = `あなたは日本のIT企業の面接官です。理系留学生の模擬面接の会話ログを読み、5軸で評価してください。
-評価軸: 論理性(1-5)、技術的正確さ(1-5)、わかりやすさ(1-5)、敬語・ビジネス日本語(1-5)、具体性(1-5)。
+評価軸: 論理性(1-5)、技術的正確さ(1-5)、わかりやすさ(1-5)、敬語・ビジネス日本語(1-5)、明確さ＝曖昧・理解困難でないこと(1-5)。
 strengths/weaknesses/nextActions はそれぞれ配列で、nextActions は行動ベースで最大3つ。summary は120字程度の日本語で。
 必ず指定のJSON形式のみで出力してください。`;
 
