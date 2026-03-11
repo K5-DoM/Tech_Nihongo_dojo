@@ -95,6 +95,7 @@ export const chatRoutes = new Hono<{ Bindings: Env; Variables: Variables }>()
     });
     if (insertUserErr) {
       console.error("messages insert user error:", insertUserErr);
+      return c.json({ error: "Failed to save message" }, 500);
     }
 
     const { error: insertAsstErr } = await supabase.from("messages").insert({
@@ -105,6 +106,7 @@ export const chatRoutes = new Hono<{ Bindings: Env; Variables: Variables }>()
     });
     if (insertAsstErr) {
       console.error("messages insert assistant error:", insertAsstErr);
+      return c.json({ error: "Failed to save message" }, 500);
     }
 
     for (const tag of response.weakness_tags) {

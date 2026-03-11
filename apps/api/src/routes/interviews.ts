@@ -131,9 +131,13 @@ export const interviewsRoutes = new Hono<{ Bindings: Env; Variables: Variables }
 
     // interviews.user_id は profiles(id) を参照するため、Supabase Auth でサインアップ直後は
     // profiles に行がない場合がある。先に profiles を upsert して FK を満たす。
-    await supabase
+    const { error: profileUpsertError } = await supabase
       .from("profiles")
       .upsert({ id: userId, updated_at: new Date().toISOString() }, { onConflict: "id" });
+    if (profileUpsertError) {
+      console.error("profiles upsert error:", profileUpsertError);
+      return c.json({ error: "Failed to ensure profile" }, 500);
+    }
 
     const { data: profileRow } = await supabase
       .from("profiles")
