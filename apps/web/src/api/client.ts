@@ -8,6 +8,13 @@ function headers(): HeadersInit {
   return h;
 }
 
+function authHeadersWithoutContentType(): HeadersInit {
+  const token = getToken();
+  const h: HeadersInit = {};
+  if (token) (h as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+  return h;
+}
+
 export type StartInterviewRes = {
   interviewId: string;
   firstQuestion: string;
@@ -51,6 +58,80 @@ export async function sendChat(interviewId: string, userMessage: string): Promis
     throw new Error((err as { error?: string }).error ?? "Failed to send message");
   }
   return res.json();
+}
+
+export type ChatWithVoiceRes = ChatRes & {
+  audioBase64: string | null;
+  audioContentType: string | null;
+};
+
+export async function sendChatWithVoice(
+  interviewId: string,
+  userMessage: string,
+  options?: { ttsProvider?: "openai" | "google" }
+): Promise<ChatWithVoiceRes> {
+  const body: { interviewId: string; userMessage: string; ttsProvider?: "openai" | "google" } = {
+    interviewId,
+    userMessage,
+  };
+  if (options?.ttsProvider) body.ttsProvider = options.ttsProvider;
+  const res = await fetch("/api/chat-with-voice", {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error((err as { error?: string }).error ?? "Failed to send message");
+  }
+  return res.json();
+}
+
+export type TtsRes = {
+  audioBase64: string;
+  audioContentType: string;
+};
+
+export async function synthesizeTTS(
+  text: string,
+  options?: { ttsProvider?: "openai" | "google" }
+): Promise<TtsRes> {
+  const body: { text: string; ttsProvider?: "openai" | "google" } = { text };
+  if (options?.ttsProvider) body.ttsProvider = options.ttsProvider;
+  const res = await fetch("/api/tts", {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error((err as { error?: string }).error ?? "Failed to synthesize speech");
+  }
+  return res.json();
+}
+
+export type AsrRes = {
+  text: string;
+};
+
+export async function transcribeAnswer(blob: Blob): Promise<AsrRes> {
+  const res = await fetch("/api/asr", {
+    method: "POST",
+    headers: authHeadersWithoutContentType(),
+    body: blob,
+  });
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const err = (await res.json()) as { error?: string };
+      if (err.error) message = err.error;
+    } catch {
+      // json でない場合はそのまま
+    }
+    throw new Error(message || "Failed to transcribe audio");
+  }
+  const data = (await res.json()) as { text?: string };
+  return { text: data.text ?? "" };
 }
 
 export type InterviewListItem = {

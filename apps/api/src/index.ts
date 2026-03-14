@@ -1,12 +1,16 @@
 import { Hono } from "hono";
 import type { SupabaseEnv } from "./lib/supabase";
 import type { OpenAIEnv } from "./lib/openai";
+import type { GoogleTTSEnv } from "./lib/google-tts";
 import { requireAuth } from "./middleware/auth";
 import { interviewsRoutes } from "./routes/interviews";
 import { chatRoutes } from "./routes/chat";
 import { profileRoutes } from "./routes/profile";
+import { asrRoutes } from "./routes/asr";
+import { chatWithVoiceRoutes } from "./routes/chat-with-voice";
+import { ttsRoutes } from "./routes/tts";
 
-type Bindings = SupabaseEnv & OpenAIEnv & {
+type Bindings = SupabaseEnv & OpenAIEnv & GoogleTTSEnv & {
   SUPABASE_JWT_SECRET?: string;
 };
 
@@ -40,6 +44,9 @@ api.get("/api/me", (c) => {
 api.route("/", interviewsRoutes);
 api.route("/", chatRoutes);
 api.route("/", profileRoutes);
+api.route("/", asrRoutes);
+api.route("/", chatWithVoiceRoutes);
+api.route("/", ttsRoutes);
 
 app.route("/", api);
 

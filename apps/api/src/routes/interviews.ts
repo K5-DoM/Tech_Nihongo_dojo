@@ -8,6 +8,7 @@ const startInterviewBodySchema = z.object({
   mode: z.string().default("standard"),
   profileSnapshot: z
     .object({
+      displayName: z.string().optional(),
       researchTheme: z.string().optional(),
       techStack: z.array(z.string()).optional(),
       targetRole: z.string().optional(),
@@ -193,17 +194,9 @@ export const interviewsRoutes = new Hono<{ Bindings: Env; Variables: Variables }
       return c.json({ error: "Failed to create interview" }, 500);
     }
 
-    let firstQuestion: string;
-    try {
-      firstQuestion = await getFirstQuestion(c.env, {
-        researchTheme: mergedSnapshot.researchTheme,
-        techStack: mergedSnapshot.techStack,
-        targetRole: mergedSnapshot.targetRole,
-      });
-    } catch (e) {
-      console.error("OpenAI first question error:", e);
-      firstQuestion = "まず研究テーマを3分で説明してください。";
-    }
+    const firstQuestion = getFirstQuestion(c.env, {
+      displayName: mergedSnapshot.displayName,
+    });
 
     return c.json({
       interviewId: interview.id,
