@@ -1,0 +1,30 @@
+# ローカル用。このファイルをコピーして .dev.vars にリネームし、値を埋める。
+# .dev.vars は .gitignore 済みなので push されない。
+# 本番では Cloudflare の環境変数や wrangler secret を使用すること。
+#
+# Supabase のキー・JWT の取り方（タブの区別）: plan_pack/docs/supabase_keys_reference.md を参照。
+
+# Project Settings → API → Project URL（どのタブでも同じ）
+SUPABASE_URL=
+
+# Project Settings → API → タブ「Legacy anon, service_role API keys」→ service_role の値
+# （または タブ「Publishable and secret API keys」→ Secret key sb_secret_... でも可）
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Project Settings → JWT → タブ「Legacy JWT Secret」→ JWT Secret（Reveal で表示）
+# Bearer トークン検証に使用。anon/service_role のキーではなく「JWT Secret」をコピーすること。
+SUPABASE_JWT_SECRET=
+
+# 面接・チャットの初回質問・応答生成用（OpenAI API Key）
+OPENAI_API_KEY=
+
+# 音声認識・読み上げ用に利用する OpenAI キー（OPENAI_API_KEY と同一でも可）
+# Whisper / gpt-4o-mini-tts などの利用を想定
+# AUDIO_OPENAI_API_KEY を省略した場合は OPENAI_API_KEY を使う実装にしてもよい。
+
+# 面接官の声で「Google（高音質）」を使う場合: GCP で Cloud Text-to-Speech API を有効化し、
+# 認証情報で API キーを作成してここに設定。未設定時は Google 指定でも OpenAI TTS にフォールバック。
+GOOGLE_CLOUD_TTS_API_KEY=
+
+# 開発用: 発行するJWTの sub に使うユーザーID。開発者の Supabase Auth のユーザーUUIDを入れると、その開発者として /api/me 等を試せる。
+TEST_USER_ID=
