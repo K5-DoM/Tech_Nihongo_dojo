@@ -110,15 +110,22 @@ export async function getChatTurn(
         model: "gpt-5-mini",
         messages: fullMessages,
         response_format: zodResponseFormat(chatResponseSchema, "chat_response"),
-        max_tokens: 800,
-        temperature: 0.3,
+        max_completion_tokens: 2000,
       });
-      const raw = completion.choices[0]?.message?.content?.trim();
+      const msg = completion.choices[0]?.message;
+      console.log("[diag] finish_reason:", completion.choices[0]?.finish_reason);
+      console.log("[diag] content:", msg?.content);
+      console.log("[diag] refusal:", msg?.refusal);
+      const raw = msg?.content?.trim();
       if (!raw) return null;
-      const parsed = chatResponseSchema.safeParse(JSON.parse(raw));
+      let jsonParsed: unknown;
+      try { jsonParsed = JSON.parse(raw); } catch (pe) { console.log("[diag] JSON.parse error:", pe); return null; }
+      const parsed = chatResponseSchema.safeParse(jsonParsed);
+      console.log("[diag] schema ok:", parsed.success, parsed.success ? "" : JSON.stringify(parsed.error?.issues));
       return parsed.success ? parsed.data : null;
-    } catch {
-      return null;
+    } catch (e){
+      console.error(e);
+      throw e;
     }
   };
 
@@ -134,6 +141,7 @@ export async function getChatTurn(
     return result;
   }
   logDojoLlm({ event: "chat_fallback" });
+  console.error()
   return fallback;
 }
 
@@ -167,19 +175,20 @@ strengths/weaknesses/nextActions はそれぞれ配列で、nextActions は行�
       const completion = await client.chat.completions.create({
         model: "gpt-5-mini",
         messages: [
-          { role: "system", content: systemContent },
+          { role: "developer", content: systemContent },
           { role: "user", content: userContent },
         ],
         response_format: zodResponseFormat(evaluationSchema, "evaluation"),
-        max_tokens: 600,
-        temperature: 0.3,
+        max_completion_tokens: 2000,
       });
       const raw = completion.choices[0]?.message?.content?.trim();
       if (!raw) return null;
       const parsed = evaluationSchema.safeParse(JSON.parse(raw));
       return parsed.success ? parsed.data : null;
-    } catch {
-      return null;
+    } catch (err){
+      console.error("OpenAI error",err)
+
+      throw err ;
     }
   };
 
