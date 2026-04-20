@@ -5,7 +5,7 @@
 
 ---
 
-
+![Tech-Nihongo Dojo スクリーンショット](./plan_pack/docs/screenshot.png)
 
 ---
 
