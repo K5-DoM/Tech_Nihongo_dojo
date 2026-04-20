@@ -28,6 +28,32 @@
 4. OpenAI APIキー設定
 5. `.env.example` を `.env.local` にコピーして値を埋める
 
+## 実行方法
+
+### 環境構築
+```bash
+pnpm install
+```
+
+### バックエンド立ち上げ
+```bash
+cd apps/api
+pnpm run dev
+```
+
+### フロントエンド立ち上げ
+```bash
+cd [ワークスペース]
+pnpm run dev:web
+```
+
+### JWTトークン取得(開発用)
+```bash
+cd apps/api
+pnpm exec node scripts/mint-test-jwt-mjs
+```
+
+
 ---
 
 ## 免責
